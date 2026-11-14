@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tahaddi Quiz de classe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+/* Plan : atelier de quiz pour la classe. Encre sarcelle profonde, un seul accent safran,
+   réponses repérées par lettre + couleur (lisibles au vidéoprojecteur). Bibliothèque en grille, jeu plein écran. */
+:root{
+  --bg:#eef2ef; --surface:#ffffff; --ink:#12292b; --muted:#566b6c; --line:#d3dcd8;
+  --brand:#0f5257; --accent:#e0a100; --on-accent:#12292b;
+  --a:#0f6b70; --b:#b9860a; --c:#7a3b8f; --d:#c94f35; --good:#1d7f5a; --bad:#b3372b;
+  --f-display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+  --f-body:"Atkinson Hyperlegible",Verdana,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1b1c; --surface:#152728; --ink:#e8efec; --muted:#9ab0ad; --line:#2a4042;
+  --brand:#63c5c2; --accent:#f0b429; --on-accent:#12292b;
+  --a:#16868b; --b:#b9860a; --c:#93509f; --d:#d2603f; --good:#3fb489; --bad:#e2675a; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0d1b1c; --surface:#152728; --ink:#e8efec; --muted:#9ab0ad; --line:#2a4042;
+  --brand:#63c5c2; --accent:#f0b429; --on-accent:#12292b;
+  --a:#16868b; --b:#b9860a; --c:#93509f; --d:#d2603f; --good:#3fb489; --bad:#e2675a; color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.5 var(--f-body)}
+h1,h2,h3{font-family:var(--f-display);font-weight:800;line-height:1.1;margin:0;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 56px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.logo{font:800 30px/1 var(--f-display);letter-spacing:-.02em;color:var(--brand);background:none;border:0;padding:0}
+.logo i{font-style:normal;color:var(--accent)}
+.tag{color:var(--muted);font-size:15px}
+.sp{flex:1}
+.btn{border:2px solid var(--ink);background:var(--surface);border-radius:10px;padding:9px 16px;font-weight:700}
+.btn:hover{background:var(--bg)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.pri:hover{filter:brightness(1.06)}
+.btn.brand{background:var(--brand);border-color:var(--brand);color:var(--bg)}
+.btn.sm{padding:5px 10px;font-size:14px;border-width:1.5px}
+.btn.ghost{border-color:var(--line)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.hero{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;align-items:stretch;margin-bottom:28px}
+.hero .lead{background:var(--brand);color:var(--bg);border-radius:18px;padding:28px}
+.hero h1{font-size:clamp(30px,5vw,50px);margin-bottom:10px}
+.hero p{margin:0 0 18px;max-width:46ch}
+.hero .lead .btn{border-color:transparent}
+.modes{display:grid;gap:12px}
+.mode{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.mode h3{font-size:19px;margin-bottom:4px}
+.mode p{margin:0;color:var(--muted);font-size:15px}
+.sec{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.sec h2{font-size:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;border-top:6px solid var(--brand)}
+.card.ex{border-top-color:var(--accent)}
+.card h3{font-size:19px;overflow-wrap:anywhere}
+.meta{display:flex;gap:6px;flex-wrap:wrap;font-size:13px}
+.pill{border:1px solid var(--line);border-radius:99px;padding:1px 9px;color:var(--muted)}
+.pill.ex{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:700}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.empty{border:2px dashed var(--line);border-radius:14px;padding:22px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:18px}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:4px}
+input[type=text],select,textarea{width:100%;background:var(--bg);border:1.5px solid var(--line);border-radius:9px;padding:9px 11px}
+textarea{resize:vertical;min-height:70px}
+.ed{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+.qlist{display:flex;flex-direction:column;gap:6px}
+.qitem{text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qitem.on{border-color:var(--brand);box-shadow:inset 4px 0 0 var(--brand)}
+.qitem b{font-family:var(--f-display)}
+.fields{display:grid;gap:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.optrow{display:grid;grid-template-columns:38px 1fr auto;gap:8px;align-items:center}
+.let{font:800 18px/1 var(--f-display);width:38px;height:38px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none}
+.c0 .let,.let.c0{background:var(--a)}.c1 .let,.let.c1{background:var(--b)}.c2 .let,.let.c2{background:var(--c)}.c3 .let,.let.c3{background:var(--d)}
+.okpick{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;margin:0;white-space:nowrap}
+.thumb{max-width:180px;max-height:110px;border-radius:8px;border:1px solid var(--line);display:block}
+.err{color:var(--bad);font-weight:700}
+.note{color:var(--muted);font-size:14px}
+/* jeu */
+.stage{min-height:100%;display:flex;flex-direction:column;padding:16px;gap:14px;max-width:1280px;margin:0 auto}
+.gbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.gbar .ttl{font:800 18px var(--f-display);color:var(--brand)}
+.timer{font:800 30px/1 var(--f-display);font-variant-numeric:tabular-nums;background:var(--ink);color:var(--bg);border-radius:12px;padding:8px 14px;min-width:74px;text-align:center}
+.timer.low{background:var(--bad);color:#fff}
+.gmain{display:grid;grid-template-columns:1fr 250px;gap:16px;flex:1;align-items:start}
+.gmain.solo{grid-template-columns:1fr}
+.qtext{font:800 clamp(24px,3.6vw,44px)/1.15 var(--f-display);text-wrap:balance;margin-bottom:14px;overflow-wrap:anywhere}
+.qimg{max-width:100%;max-height:34vh;border-radius:12px;display:block;margin:0 0 14px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opt{display:flex;align-items:center;gap:12px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:clamp(17px,2vw,24px);font-weight:700;min-height:68px;overflow-wrap:anywhere}
+.opt.c0{border-left:10px solid var(--a)}.opt.c1{border-left:10px solid var(--b)}.opt.c2{border-left:10px solid var(--c)}.opt.c3{border-left:10px solid var(--d)}
+.opt .otxt{flex:1}
+.opt.good{background:var(--good);border-color:var(--good);color:#fff}
+.opt.good::after{content:"✓";font-size:1.3em}
+.opt.dim{opacity:.4}
+.cnt{font:800 20px var(--f-display);background:var(--ink);color:var(--bg);border-radius:8px;padding:2px 10px;font-variant-numeric:tabular-nums}
+.board{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.board h3{font-size:16px;margin-bottom:8px;color:var(--muted)}
+.sline{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-weight:700}
+.sline:last-child{border:0}
+.sline span:last-child{font-variant-numeric:tabular-nums;font-family:var(--f-display)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:2px solid var(--line);background:var(--surface);border-radius:99px;padding:8px 16px;font-weight:700}
+.chip.on{background:var(--good);border-color:var(--good);color:#fff}
+.gfoot{display:flex;gap:12px;flex-wrap:wrap;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:14px;margin:26px 0;min-height:260px}
+.step{flex:1;max-width:220px;text-align:center}
+.step .nm{font:800 20px var(--f-display);overflow-wrap:anywhere}
+.step .pts{color:var(--muted);font-variant-numeric:tabular-nums}
+.step .bar{border-radius:12px 12px 0 0;margin-top:8px;display:grid;place-items:center;font:800 44px var(--f-display);color:var(--on-accent)}
+.step.r1 .bar{height:170px;background:var(--accent)}
+.step.r2 .bar{height:120px;background:var(--brand);color:var(--bg)}
+.step.r3 .bar{height:84px;background:var(--c);color:#fff}
+.code{font:800 clamp(48px,10vw,110px)/1 var(--f-display);letter-spacing:.06em;color:var(--brand);font-variant-numeric:tabular-nums}
+.url{font-family:ui-monospace,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;overflow-wrap:anywhere;display:inline-block}
+.lobby{display:flex;gap:32px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.qr{background:#fff;padding:12px;border-radius:14px;border:1px solid var(--line);width:246px;min-height:246px}
+.qr img,.qr canvas{display:block;width:220px;height:220px}
+.players{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.players span{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 13px;font-weight:700}
+/* joueur */
+.phone{max-width:480px;margin:0 auto;padding:20px 16px;min-height:100%;display:flex;flex-direction:column;gap:16px}
+.pbtns{display:grid;gap:12px;flex:1}
+.pbtn{border:0;border-radius:16px;color:#fff;font-weight:700;font-size:20px;padding:18px;display:flex;align-items:center;gap:14px;text-align:left;min-height:76px}
+.pbtn .let{background:rgba(255,255,255,.22)}
+.pbtn.c0{background:var(--a)}.pbtn.c1{background:var(--b)}.pbtn.c2{background:var(--c)}.pbtn.c3{background:var(--d)}
+.big{font:800 34px/1.1 var(--f-display);text-align:center;margin-top:30px}
+.center{text-align:center}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;max-width:90vw;z-index:9}
+@media (max-width:800px){.hero,.ed,.gmain,.two{grid-template-columns:1fr}.opts{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.opt,.chip,.btn{transition:background .15s,opacity .15s}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s), app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>'q'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+const LET=['A','B','C','D'];
+const LEVELS=['Tronc commun','1ère année Bac','2ème année Bac','FLE A1','FLE A2','FLE B1','FLE B2','FLE C1','FOS','Autre'];
+const DURS=[10,20,30,45,60,90];
+const IN_ARTIFACT=!!window.claude||/claude/i.test(location.hostname);
+const PEER_PREFIX='tahaddi-classe-';
+const PEER_SRC='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+const QR_SRC='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+
+const EXAMPLE={id:'exemple-boite',example:true,title:'La Boîte à merveilles : repères essentiels',level:'1ère année Bac',questions:[
+ {id:'e1',type:'qcm',text:'Qui est l’auteur de « La Boîte à merveilles » ?',opts:['Driss Chraïbi','Ahmed Sefrioui','Tahar Ben Jelloun','Mohammed Khaïr-Eddine'],ok:1,dur:20,img:''},
+ {id:'e2',type:'qcm',text:'En quelle année le roman est-il publié ?',opts:['1945','1962','1954','1970'],ok:2,dur:20,img:''},
+ {id:'e3',type:'qcm',text:'Dans quelle ville se déroule l’histoire ?',opts:['Fès','Marrakech','Meknès','Rabat'],ok:0,dur:20,img:''},
+ {id:'e4',type:'qcm',text:'Comment s’appelle le narrateur ?',opts:['Driss','Allal','Hammoussa','Sidi Mohammed'],ok:3,dur:20,img:''},
+ {id:'e5',type:'vf',text:'Le père du narrateur, Maâlem Abdeslam, est tisserand.',opts:['Vrai','Faux','',''],ok:0,dur:15,img:''},
+ {id:'e6',type:'qcm',text:'Comment appelle-t-on la maison où vit la famille du narrateur ?',opts:['Dar Sbitar','Dar Chouafa','Dar El Makhzen','Riad Zitoun'],ok:1,dur:20,img:''},
+ {id:'e7',type:'qcm',text:'À quel genre appartient cette œuvre ?',opts:['Tragédie','Conte philosophique','Roman autobiographique','Nouvelle fantastique'],ok:2,dur:20,img:''}
+]};
+
+const S={view:'home',quizzes:[],sync:'local',edit:null,eq:0,errs:[],setup:null,backup:false};
+let G=null,H=null,P=null,tick=null;
+
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3500)}
+const clone=o=>JSON.parse(JSON.stringify(o));
+const visOpts=q=>q.type==='vf'?[{t:'Vrai',i:0},{t:'Faux',i:1}]:q.opts.map((t,i)=>({t,i})).filter(o=>String(o.t).trim());
+function cleanQuiz(q){ // assainit un quiz importé
+  if(!q||typeof q!=='object'||!Array.isArray(q.questions))return null;
+  return {id:/^[\w.-]{1,60}$/.test(q.id||'')&&q.id!==EXAMPLE.id?q.id:uid(),title:String(q.title||'Sans titre').slice(0,120),level:LEVELS.includes(q.level)?q.level:'Autre',updated:+q.updated||Date.now(),
+   questions:q.questions.slice(0,200).map(x=>({id:uid(),type:x.type==='vf'?'vf':'qcm',text:String(x.text||'').slice(0,400),
+     opts:[0,1,2,3].map(i=>String((x.opts||[])[i]||'').slice(0,160)),ok:[0,1,2,3].includes(+x.ok)?+x.ok:0,dur:DURS.includes(+x.dur)?+x.dur:20,
+     img:typeof x.img==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(x.img)?x.img:''}))};
+}
+
+/* ---------- enregistrement ---------- */
+const LS='tahaddi.quizzes.v1';
+const store={col:null,
+  local(){try{localStorage.setItem(LS,JSON.stringify(S.quizzes))}catch(e){}},
+  async init(){
+    try{S.quizzes=(JSON.parse(localStorage.getItem(LS)||'[]')||[]).map(cleanKeep).filter(Boolean)}catch(e){S.quizzes=[]}
+    render();
+    if(!window.claude||!window.claude.use)return;
+    try{
+      const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
+      const id=user&&await user.id(); if(!db||!id)return;
+      const col=db.collection('data/users/'+id);
+      const snap=await Promise.race([col.get(),new Promise((_,r)=>setTimeout(()=>r(new Error('délai')),10000))]);
+      const remote=snap.docs.map(d=>cleanKeep(clone(d.data()))).filter(Boolean);
+      this.col=col;S.sync='cloud';
+      if(remote.length){S.quizzes=remote.sort((a,b)=>b.updated-a.updated);this.local()}
+      else for(const q of S.quizzes)await col.doc(q.id).set(clone(q)).catch(()=>{});
+      if(S.view==='home')render();
+    }catch(e){}
+  },
+  async save(q){q.updated=Date.now();const i=S.quizzes.findIndex(x=>x.id===q.id);if(i<0)S.quizzes.unshift(q);else S.quizzes[i]=q;this.local();
+    if(this.col){try{await this.col.doc(q.id).set(clone(q))}catch(e){toast(e&&e.code==='invalid_argument'?'Quiz trop lourd pour la sauvegarde en ligne : retirez ou réduisez des images.':'Sauvegarde en ligne impossible pour le moment. Le quiz reste dans ce navigateur.')}}},
+  async del(id){S.quizzes=S.quizzes.filter(q=>q.id!==id);this.local();if(this.col)this.col.doc(id).delete().catch(()=>{})}
+};
+function cleanKeep(q){const c=cleanQuiz(q);if(c&&q.id&&/^[\w.-]{1,60}$/.test(q.id))c.id=q.id;if(c)c.questions.forEach((x,i)=>{const o=q.questions[i];if(o&&o.id)x.id=String(o.id).slice(0,40)});return c}
+
+/* ---------- vues ---------- */
+function render(){
+  clearInterval(tick);
+  const v={home:vHome,edit:vEdit,setup:vSetup,game:vGame,host:vHost,join:vJoin}[S.view]||vHome;
+  app.innerHTML=v();
+  if(S.view==='game'&&G.phase==='q')runTimer(G,()=>{G.phase='reveal';render()});
+  if(S.view==='host'&&H&&H.phase==='q')runTimer(H,hostReveal);
+  if(S.view==='host'&&H&&H.phase==='lobby')drawQR();
+}
+function head(extra=''){return `<div class="top"><button class="logo" data-act="home" aria-label="Accueil Tahaddi">Tahaddi<i>.</i></button><span class="tag">le défi en classe</span><span class="sp"></span>${extra}</div>`}
+function card(q){const n=q.questions.length;return `<article class="card ${q.example?'ex':''}"><div class="meta">${q.example?'<span class="pill ex">Exemple</span>':''}<span class="pill">${esc(q.level)}</span><span class="pill">${n} question${n>1?'s':''}</span></div><h3>${esc(q.title)}</h3><span class="sp"></span><div class="row"><button class="btn pri sm" data-act="play" data-id="${esc(q.id)}">Lancer</button>${q.example?`<button class="btn sm ghost" data-act="dup" data-id="${esc(q.id)}">Copier dans mes quiz</button>`:`<button class="btn sm ghost" data-act="edit" data-id="${esc(q.id)}">Modifier</button><button class="btn sm ghost" data-act="dup" data-id="${esc(q.id)}">Dupliquer</button><button class="btn sm danger" data-act="del" data-id="${esc(q.id)}">Supprimer</button>`}</div></article>`}
+function vHome(){
+  return `<div class="wrap">${head(`<button class="btn ghost" data-act="go-join">Rejoindre une partie</button><button class="btn pri" data-act="new">Créer un quiz</button>`)}
+  <section class="hero"><div class="lead"><h1>Vos quiz, votre classe, sans limite.</h1><p>Créez autant de quiz que vous voulez, avec autant de questions et de joueurs que nécessaire. Aucun abonnement, aucun compte pour les élèves.</p><button class="btn pri" data-act="new">Créer un quiz</button></div>
+  <div class="modes"><div class="mode"><h3>Écran unique</h3><p>Le quiz est projeté. Les équipes répondent à main levée ou avec des cartons A, B, C, D, et vous attribuez les points.</p></div><div class="mode"><h3>Sur téléphones</h3><p>Chaque élève rejoint la partie avec un code à 6 chiffres. Les points tiennent compte de la justesse et de la rapidité.</p></div></div></section>
+  <div class="sec"><h2>Mes quiz</h2><span class="note">${S.sync==='cloud'?'Enregistrés dans votre compte':'Enregistrés dans ce navigateur'}</span><span class="sp"></span><button class="btn sm ghost" data-act="backup">Sauvegarde et import</button></div>
+  ${S.backup?`<div class="panel" style="margin:0 0 14px"><label for="bk">Sauvegarde de vos quiz (texte à copier, ou à coller ici pour importer)</label><textarea id="bk" rows="5" spellcheck="false">${esc(JSON.stringify(S.quizzes))}</textarea><div class="row" style="margin-top:8px"><button class="btn sm" data-act="bk-copy">Copier</button><button class="btn sm brand" data-act="bk-import">Importer le texte collé</button><span class="note">Utile pour transférer vos quiz vers un autre appareil ou une autre adresse du site.</span></div></div>`:''}
+  <div class="grid">${S.quizzes.map(card).join('')}${card(EXAMPLE)}</div>
+  ${S.quizzes.length?'':'<p class="note" style="margin-top:12px">Vous n’avez pas encore de quiz. Lancez l’exemple pour essayer, ou créez le vôtre.</p>'}
+  </div>`;
+}
+function newQ(){return {id:uid(),type:'qcm',text:'',opts:['','','',''],ok:0,dur:20,img:''}}
+function vEdit(){
+  const z=S.edit,q=z.questions[S.eq];
+  return `<div class="wrap">${head(`<button class="btn ghost" data-act="home">Annuler</button><button class="btn pri" data-act="save">Enregistrer le quiz</button>`)}
+  <div class="panel" style="margin:0 0 16px"><div class="two"><div><label for="f-title">Titre du quiz</label><input type="text" id="f-title" data-f="title" maxlength="120" value="${esc(z.title)}" placeholder="Ex. Antigone : le prologue"></div><div><label for="f-level">Niveau</label><select id="f-level" data-f="level">${LEVELS.map(l=>`<option ${l===z.level?'selected':''}>${l}</option>`).join('')}</select></div></div>
+  ${S.errs.length?`<p class="err" role="alert" style="margin:12px 0 0">${S.errs.map(esc).join('<br>')}</p>`:''}</div>
+  <div class="ed"><div><div class="qlist">${z.questions.map((x,i)=>`<button class="qitem ${i===S.eq?'on':''}" data-act="q-sel" data-i="${i}"><b>${i+1}.</b> ${esc(x.text||'Nouvelle question')}</button>`).join('')}</div><button class="btn brand" style="width:100%;margin-top:10px" data-act="q-add">Ajouter une question</button></div>
+  <div class="panel" style="margin:0"><div class="fields">
+   <div><label for="f-text">Question ${S.eq+1}</label><textarea id="f-text" data-f="text" maxlength="400" placeholder="Saisissez la question">${esc(q.text)}</textarea></div>
+   <div class="two"><div><label for="f-type">Type</label><select id="f-type" data-f="type"><option value="qcm" ${q.type==='qcm'?'selected':''}>Choix multiple (2 à 4 réponses)</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai ou faux</option></select></div>
+   <div><label for="f-dur">Temps de réponse</label><select id="f-dur" data-f="dur">${DURS.map(d=>`<option value="${d}" ${d===q.dur?'selected':''}>${d} secondes</option>`).join('')}</select></div></div>
+   <div><label>Réponses (cochez la bonne)</label><div class="fields" style="gap:8px">${(q.type==='vf'?[0,1]:[0,1,2,3]).map(i=>`<div class="optrow"><span class="let c${i}">${LET[i]}</span>${q.type==='vf'?`<input type="text" id="f-o${i}" value="${i?'Faux':'Vrai'}" disabled>`:`<input type="text" id="f-o${i}" data-f="opt" data-i="${i}" maxlength="160" value="${esc(q.opts[i])}" placeholder="Réponse ${LET[i]}${i>1?' (facultative)':''}">`}<label class="okpick" for="f-ok${i}"><input type="radio" name="ok" id="f-ok${i}" data-f="ok" value="${i}" ${q.ok===i?'checked':''}> Bonne</label></div>`).join('')}</div></div>
+   <div><label for="f-img">Image (facultative)</label>${q.img?`<img class="thumb" src="${esc(q.img)}" alt="Image de la question"><button class="btn sm ghost" style="margin-top:6px" data-act="img-del">Retirer l’image</button>`:`<input type="file" id="f-img" accept="image/*" data-f="img">`}</div>
+   <div class="row"><button class="btn sm ghost" data-act="q-up" ${S.eq===0?'disabled':''}>Monter</button><button class="btn sm ghost" data-act="q-down" ${S.eq===z.questions.length-1?'disabled':''}>Descendre</button><button class="btn sm ghost" data-act="q-dup">Dupliquer</button><button class="btn sm danger" data-act="q-del" ${z.questions.length<2?'disabled':''}>Supprimer la question</button></div>
+  </div></div></div></div>`;
+}
+function validate(z){
+  const e=[];if(!z.title.trim())e.push('Donnez un titre au quiz.');
+  z.questions.forEach((q,i)=>{const n=i+1;if(!q.text.trim())e.push(`Question ${n} : le texte est vide.`);
+    if(q.type==='vf'){if(q.ok>1)q.ok=0}else{const v=visOpts(q);if(v.length<2)e.push(`Question ${n} : il faut au moins deux réponses.`);else if(!v.some(o=>o.i===q.ok))e.push(`Question ${n} : la bonne réponse cochée est vide.`)}});
+  return e;
+}
+function vSetup(){
+  const s=S.setup,z=s.quiz;
+  return `<div class="wrap">${head(`<button class="btn ghost" data-act="home">Retour</button>`)}
+  <div class="sec"><h2>${esc(z.title)}</h2><span class="note">${z.questions.length} questions</span></div>
+  <div class="row" style="margin-bottom:14px"><button class="chip ${s.mode==='screen'?'on':''}" data-act="mode" data-m="screen">Écran unique</button><button class="chip ${s.mode==='phones'?'on':''}" data-act="mode" data-m="phones">Sur téléphones</button></div>
+  ${s.mode==='screen'?`<div class="panel" style="margin:0"><div class="fields"><div><label for="f-nt">Nombre d’équipes</label><select id="f-nt" data-f="nteams" style="max-width:200px">${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}" ${n===s.teams.length?'selected':''}>${n===1?'Classe entière (sans équipes)':n+' équipes'}</option>`).join('')}</select></div>
+   ${s.teams.length>1?`<div class="two">${s.teams.map((t,i)=>`<div><label for="f-t${i}">Équipe ${i+1}</label><input type="text" id="f-t${i}" data-f="team" data-i="${i}" maxlength="24" value="${esc(t)}"></div>`).join('')}</div>`:''}
+   <p class="note" style="margin:0">Chaque bonne réponse rapporte 100 points à l’équipe. Vous cochez les équipes qui ont juste après chaque question.</p>
+   <div><button class="btn pri" data-act="start-screen">Démarrer la partie</button></div></div></div>`
+  :`<div class="panel" style="margin:0">${IN_ARTIFACT?`<h3 style="margin-bottom:8px">Ce mode a besoin d’une adresse web publique</h3><p style="margin:0 0 10px;max-width:65ch">Ici, la page s’affiche dans votre espace Claude : vos élèves ne peuvent pas l’ouvrir sans compte, et les connexions entre appareils y sont bloquées. Pour jouer sur téléphones, mettez le fichier de cette même plateforme en ligne sur un hébergement gratuit, puis ouvrez-la à cette adresse. Tout le reste (création, bibliothèque, écran unique) fonctionne ici.</p><p class="note" style="margin:0">Vos quiz se transfèrent d’une adresse à l’autre avec « Sauvegarde et import ».</p>`
+   :`<p style="margin:0 0 12px;max-width:65ch">Vos élèves ouvriront cette même page sur leur téléphone, choisiront « Rejoindre une partie » et saisiront le code affiché. Gardez cet écran ouvert pendant toute la partie : c’est lui qui la dirige.</p>${location.protocol==='file:'?'<p class="err">Cette page est ouverte comme un fichier local : les élèves ne pourront la rejoindre que si elle est mise en ligne.</p>':''}<button class="btn pri" data-act="start-host">Ouvrir la salle</button>`}</div>`}
+  </div>`;
+}
+function qBlock(q,reveal,counts){
+  return `<div class="qtext">${esc(q.text)}</div>${q.img?`<img class="qimg" src="${esc(q.img)}" alt="">`:''}<div class="opts">${visOpts(q).map(o=>`<div class="opt c${o.i} ${reveal?(o.i===q.ok?'good':'dim'):''}"><span class="let">${LET[o.i]}</span><span class="otxt">${esc(o.t)}</span>${counts?`<span class="cnt">${counts[o.i]||0}</span>`:''}</div>`).join('')}</div>`;
+}
+function runTimer(st,onEnd){
+  const el=$('#timer');const paint=()=>{if(el){el.textContent=Math.max(0,Math.ceil(st.left));el.classList.toggle('low',st.left<=5)}};paint();
+  let last=Date.now();
+  tick=setInterval(()=>{const now=Date.now();st.left-=(now-last)/1000;last=now;paint();if(st.left<=0){clearInterval(tick);onEnd()}},200);
+}
+function podium(list){ // list: [{name,score}] triée
+  const top=list.slice(0,3),order=[top[1],top[0],top[2]],cls=['r2','r1','r3'],rk=[2,1,3];
+  return `<div class="podium">${order.map((p,i)=>p?`<div class="step ${cls[i]}"><div class="nm">${esc(p.name)}</div><div class="pts">${p.score} pts</div><div class="bar">${rk[i]}</div></div>`:'').join('')}</div>${list.length>3?`<div class="board" style="max-width:520px;margin:0 auto">${list.slice(3).map((p,i)=>`<div class="sline"><span>${i+4}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}</div>`:''}`;
+}
+function gbar(title,i,n,timer){return `<div class="gbar"><span class="ttl">${esc(title)}</span><span class="pill">Question ${i+1} / ${n}</span><span class="sp"></span><button class="btn sm ghost" data-act="full">Plein écran</button><button class="btn sm ghost" data-act="quit">Quitter</button>${timer?'<span class="timer" id="timer" aria-live="off"></span>':''}</div>`}
+function vGame(){
+  const z=G.quiz,n=z.questions.length,multi=G.teams.length>1;
+  if(G.phase==='end'){const l=[...G.teams].sort((a,b)=>b.score-a.score);
+    return `<div class="stage"><div class="gbar"><span class="ttl">${esc(z.title)}</span><span class="sp"></span></div><h1 class="center" style="font-size:44px">${multi?'Le podium':'Quiz terminé'}</h1>${multi?podium(l):`<p class="big">${G.teams[0].score/100} bonne${G.teams[0].score>100?'s':''} réponse${G.teams[0].score>100?'s':''} sur ${n}</p>`}<div class="row" style="justify-content:center;margin-top:20px"><button class="btn pri" data-act="replay">Rejouer</button><button class="btn" data-act="home">Retour à mes quiz</button></div></div>`}
+  const q=z.questions[G.i],rev=G.phase==='reveal';
+  return `<div class="stage">${gbar(z.title,G.i,n,!rev)}<div class="gmain ${multi?'':'solo'}"><div>${qBlock(q,rev)}</div>${multi?`<aside class="board"><h3>Scores</h3>${[...G.teams].sort((a,b)=>b.score-a.score).map(t=>`<div class="sline"><span>${esc(t.name)}</span><span>${t.score}</span></div>`).join('')}</aside>`:''}</div>
+  <div class="gfoot">${rev?`<b>${multi?'Équipes qui ont juste :':'La classe a-t-elle trouvé ?'}</b><div class="chips">${G.teams.map((t,i)=>`<button class="chip ${G.won.has(i)?'on':''}" data-act="award" data-i="${i}" aria-pressed="${G.won.has(i)}">${multi?esc(t.name):'Oui, bonne réponse'}</button>`).join('')}</div><span class="sp"></span><button class="btn pri" data-act="g-next">${G.i===n-1?'Voir le résultat':'Question suivante'}</button>`:`<span class="note">Les élèves répondent à main levée ou avec leurs cartons.</span><span class="sp"></span><button class="btn pri" data-act="g-reveal">Révéler la réponse</button>`}</div></div>`;
+}
+
+/* ---------- mode téléphones : animateur ---------- */
+function loadScript(src){return new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+const joinUrl=()=>location.origin+location.pathname+'#rejoindre-'+H.code;
+async function drawQR(){
+  try{if(!window.QRCode)await loadScript(QR_SRC)}catch(e){return}
+  const el=$('#qr');if(!el||!H||H.phase!=='lobby'||!window.QRCode)return;el.innerHTML='';
+  new QRCode(el,{text:joinUrl(),width:220,height:220,colorDark:'#12292b',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+}
+function loadPeer(){return new Promise((ok,ko)=>{if(window.Peer)return ok();const s=document.createElement('script');s.src=PEER_SRC;s.onload=()=>window.Peer?ok():ko();s.onerror=ko;document.head.appendChild(s)})}
+function ranking(){return Object.values(H.players).map(p=>({name:p.name,score:p.score})).sort((a,b)=>b.score-a.score)}
+function bcast(m){for(const p of Object.values(H.players))try{p.conn.open&&p.conn.send(m)}catch(e){}}
+async function hostOpen(quiz){
+  H={quiz,code:'',players:{},i:0,phase:'opening',left:0,err:''};S.view='host';render();
+  try{await loadPeer()}catch(e){H.err='Impossible de charger le module de connexion. Vérifiez la connexion internet.';return render()}
+  const tryOpen=()=>{const code=String(Math.floor(100000+Math.random()*900000));const peer=new Peer(PEER_PREFIX+code);H.peer=peer;
+    peer.on('open',()=>{H.code=code;H.phase='lobby';render()});
+    peer.on('error',e=>{if(e.type==='unavailable-id'){peer.destroy();tryOpen()}else if(H.phase==='opening'){H.err='Connexion au service de mise en relation impossible. Réessayez dans un instant.';render()}});
+    peer.on('disconnected',()=>{try{peer.reconnect()}catch(e){}});
+    peer.on('connection',conn=>{conn.on('data',m=>hostMsg(conn,m));conn.on('close',()=>{const p=H&&H.players[conn.peer];if(p&&H.phase==='lobby'){delete H.players[conn.peer];render()}})});
+  };tryOpen();
+}
+function hostMsg(conn,m){
+  if(!H||!m||typeof m!=='object')return;
+  if(m.t==='join'){const name=String(m.name||'').trim().slice(0,20)||'Joueur';
+    if(!H.players[conn.peer]){if(Object.keys(H.players).length>=300)return;H.players[conn.peer]={name,score:0,ans:null,at:0,conn}}else H.players[conn.peer].conn=conn;
+    conn.send({t:'lobby',title:H.quiz.title});if(H.phase==='lobby')render();else if(H.phase==='q')sendQ(conn);return}
+  const p=H.players[conn.peer];if(!p)return;
+  if(m.t==='ans'&&H.phase==='q'&&m.q===H.i&&p.ans===null&&[0,1,2,3].includes(m.c)){p.ans=m.c;p.at=H.dur-Math.max(0,H.left);
+    const all=Object.values(H.players),done=all.filter(x=>x.ans!==null).length;const el=$('#answered');if(el)el.textContent=done+' / '+all.length+' réponses';
+    if(done===all.length){clearInterval(tick);hostReveal()}}
+}
+function sendQ(conn){const q=H.quiz.questions[H.i];const m={t:'q',i:H.i,n:H.quiz.questions.length,text:q.text,opts:visOpts(q)};conn?conn.send(m):bcast(m)}
+function hostAsk(){const q=H.quiz.questions[H.i];H.phase='q';H.dur=q.dur;H.left=q.dur;for(const p of Object.values(H.players)){p.ans=null;p.at=0;p.gain=0}sendQ();render()}
+function hostReveal(){
+  const q=H.quiz.questions[H.i];H.phase='reveal';H.counts={};
+  for(const p of Object.values(H.players)){if(p.ans!==null)H.counts[p.ans]=(H.counts[p.ans]||0)+1;const ok=p.ans===q.ok;p.gain=ok?Math.round(500+500*(1-Math.min(1,p.at/H.dur))):0;p.score+=p.gain}
+  const r=ranking();
+  for(const p of Object.values(H.players)){try{p.conn.open&&p.conn.send({t:'res',ok:p.ans===q.ok,answered:p.ans!==null,gain:p.gain,score:p.score,rank:r.findIndex(x=>x.name===p.name&&x.score===p.score)+1,total:r.length,good:(visOpts(q).find(o=>o.i===q.ok)||{}).t||''})}catch(e){}}
+  render();
+}
+function hostNext(){if(H.i>=H.quiz.questions.length-1){H.phase='end';const r=ranking();for(const p of Object.values(H.players)){try{p.conn.open&&p.conn.send({t:'end',score:p.score,rank:r.findIndex(x=>x.name===p.name&&x.score===p.score)+1,total:r.length})}catch(e){}}render()}else{H.i++;hostAsk()}}
+function hostClose(){if(H&&H.peer){try{H.peer.destroy()}catch(e){}}H=null}
+function vHost(){
+  const z=H.quiz,n=z.questions.length,pl=Object.values(H.players);
+  if(H.err)return `<div class="wrap">${head()}<p class="err">${esc(H.err)}</p><button class="btn" data-act="home">Retour</button></div>`;
+  if(H.phase==='opening')return `<div class="stage"><p class="big">Ouverture de la salle…</p></div>`;
+  if(H.phase==='lobby')return `<div class="stage"><div class="gbar"><span class="ttl">${esc(z.title)}</span><span class="sp"></span><button class="btn sm ghost" data-act="full">Plein écran</button><button class="btn sm ghost" data-act="quit">Fermer la salle</button></div>
+    <div class="center"><div class="lobby"><div><div id="qr" class="qr" role="img" aria-label="Code QR pour rejoindre la partie"></div><p class="note" style="margin:6px 0 0">Scannez pour rejoindre</p></div><div><p style="margin:0 0 4px">ou ouvrez <span class="url">${esc(location.origin+location.pathname)}</span><br>puis « Rejoindre une partie »</p><p class="note" style="margin:10px 0 0">Code de la partie</p><div class="code">${H.code.slice(0,3)} ${H.code.slice(3)}</div></div></div>
+    <p><b>${pl.length}</b> joueur${pl.length>1?'s':''} connecté${pl.length>1?'s':''}</p><div class="players" style="justify-content:center">${pl.map(p=>`<span>${esc(p.name)}</span>`).join('')}</div>
+    <p style="margin-top:22px"><button class="btn pri" data-act="h-start" ${pl.length?'':'disabled'}>Commencer le quiz</button></p></div></div>`;
+  if(H.phase==='end')return `<div class="stage"><div class="gbar"><span class="ttl">${esc(z.title)}</span></div><h1 class="center" style="font-size:44px">Le podium</h1>${podium(ranking())}<div class="row" style="justify-content:center;margin-top:20px"><button class="btn" data-act="quit">Fermer la salle</button></div></div>`;
+  const q=z.questions[H.i],rev=H.phase==='reveal';
+  return `<div class="stage">${gbar(z.title,H.i,n,!rev)}<div class="gmain ${rev?'':'solo'}"><div>${qBlock(q,rev,rev?H.counts:null)}</div>${rev?`<aside class="board"><h3>Classement</h3>${ranking().slice(0,8).map((p,i)=>`<div class="sline"><span>${i+1}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}</aside>`:''}</div>
+  <div class="gfoot">${rev?`<span class="sp"></span><button class="btn pri" data-act="h-next">${H.i===n-1?'Voir le podium':'Question suivante'}</button>`:`<b id="answered">${pl.filter(p=>p.ans!==null).length} / ${pl.length} réponses</b><span class="sp"></span><button class="btn" data-act="h-reveal">Arrêter le temps</button>`}</div></div>`;
+}
+
+/* ---------- mode téléphones : joueur ---------- */
+function vJoin(){
+  if(!P)P={phase:'form',err:'',name:'',code:hashCode()};
+  const back=`<button class="btn sm ghost" data-act="p-leave">Quitter</button>`;
+  let body='';
+  if(IN_ARTIFACT)body=`<p>Pour rejoindre une partie, ouvrez l’adresse publique du site indiquée par votre professeur.</p>`;
+  else if(P.phase==='form')body=`<h1 style="font-size:32px">Rejoindre une partie</h1><div><label for="p-code">Code de la partie</label><input type="text" id="p-code" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="6 chiffres" value="${esc(P.code)}" style="font-size:26px;letter-spacing:.1em"></div><div><label for="p-name">Votre prénom</label><input type="text" id="p-name" maxlength="20" autocomplete="off" value="${esc(P.name)}"></div>${P.err?`<p class="err" role="alert">${esc(P.err)}</p>`:''}<button class="btn pri" data-act="p-join">Entrer</button>`;
+  else if(P.phase==='connecting')body=`<p class="big">Connexion…</p>`;
+  else if(P.phase==='lobby')body=`<p class="big">Vous êtes dans la salle, ${esc(P.name)}.</p><p class="center note">Le quiz « ${esc(P.title||'')} » va commencer. Regardez l’écran du professeur.</p>`;
+  else if(P.phase==='q')body=`<p class="note" style="margin:0">Question ${P.q.i+1} / ${P.q.n}</p><h2 style="font-size:22px">${esc(P.q.text)}</h2><div class="pbtns">${P.q.opts.map(o=>`<button class="pbtn c${o.i}" data-act="p-ans" data-c="${o.i}"><span class="let">${LET[o.i]}</span><span>${esc(o.t)}</span></button>`).join('')}</div>`;
+  else if(P.phase==='wait')body=`<p class="big">Réponse envoyée.</p><p class="center note">Attendez la fin du temps.</p>`;
+  else if(P.phase==='res'){const r=P.res;body=`<p class="big" style="color:var(${r.ok?'--good':'--bad'})">${r.ok?'Bonne réponse':r.answered?'Mauvaise réponse':'Temps écoulé'}</p>${r.ok?'':`<p class="center">La bonne réponse : <b>${esc(r.good)}</b></p>`}<p class="center"><b>+${r.gain}</b> points · total <b>${r.score}</b><br>Vous êtes ${r.rank}${r.rank===1?'er':'e'} sur ${r.total}</p>`}
+  else if(P.phase==='end'){const r=P.res;body=`<p class="big">Quiz terminé</p><p class="center">Score final : <b>${r.score}</b> points<br>Classement : ${r.rank}${r.rank===1?'er':'e'} sur ${r.total}</p>`}
+  else if(P.phase==='lost')body=`<p class="big">Connexion perdue</p><p class="center note">La salle a été fermée ou votre connexion a été coupée.</p><button class="btn pri" data-act="p-reset">Rejoindre à nouveau</button>`;
+  return `<div class="phone"><div class="row"><button class="logo" data-act="p-leave">Tahaddi<i>.</i></button><span class="sp"></span>${back}</div>${body}</div>`;
+}
+async function playerJoin(){
+  P.code=($('#p-code').value||'').replace(/\D/g,'');P.name=($('#p-name').value||'').trim().slice(0,20);
+  if(P.code.length!==6){P.err='Le code comporte 6 chiffres.';return render()}
+  if(!P.name){P.err='Indiquez votre prénom.';return render()}
+  P.err='';P.phase='connecting';render();
+  const fail=m=>{if(P&&(P.phase==='connecting')){P.phase='form';P.err=m;try{P.peer&&P.peer.destroy()}catch(e){}render()}};
+  try{await loadPeer()}catch(e){return fail('Connexion internet insuffisante. Réessayez.')}
+  const peer=new Peer();P.peer=peer;
+  const to=setTimeout(()=>fail('La salle ne répond pas. Vérifiez le code et réessayez.'),15000);
+  peer.on('error',e=>fail(e.type==='peer-unavailable'?'Aucune partie avec ce code.':'Connexion impossible sur ce réseau. Réessayez.'));
+  peer.on('open',()=>{const conn=peer.connect(PEER_PREFIX+P.code,{reliable:true});P.conn=conn;
+    conn.on('open',()=>conn.send({t:'join',name:P.name}));
+    conn.on('data',m=>{if(!m||typeof m!=='object'||!P)return;
+      if(m.t==='lobby'){clearTimeout(to);P.title=String(m.title||'');if(P.phase==='connecting')P.phase='lobby'}
+      else if(m.t==='q'&&Array.isArray(m.opts)){P.q={i:+m.i||0,n:+m.n||0,text:String(m.text||''),opts:m.opts.filter(o=>o&&[0,1,2,3].includes(o.i)).map(o=>({i:o.i,t:String(o.t||'')}))};P.phase='q'}
+      else if(m.t==='res'){P.res={ok:!!m.ok,answered:!!m.answered,gain:+m.gain||0,score:+m.score||0,rank:+m.rank||0,total:+m.total||0,good:String(m.good||'')};P.phase='res'}
+      else if(m.t==='end'){P.res={score:+m.score||0,rank:+m.rank||0,total:+m.total||0};P.phase='end'}
+      render()});
+    conn.on('close',()=>{if(P&&P.phase!=='end'&&P.phase!=='form'){P.phase='lost';render()}});
+  });
+}
+function playerLeave(){if(P&&P.peer){try{P.peer.destroy()}catch(e){}}P=null}
+
+/* ---------- actions ---------- */
+function go(v){S.view=v;render();window.scrollTo(0,0)}
+function findQuiz(id){return id===EXAMPLE.id?EXAMPLE:S.quizzes.find(q=>q.id===id)}
+let armed=null;
+const A={
+  home(){hostClose();playerLeave();G=null;S.edit=null;S.errs=[];try{if(location.hash)history.replaceState(null,'',location.pathname+location.search)}catch(e){}go('home')},
+  'go-join'(){P=null;go('join')},
+  new(){S.edit={id:uid(),title:'',level:LEVELS[0],questions:[newQ()]};S.eq=0;S.errs=[];go('edit')},
+  edit(d){const q=findQuiz(d.id);if(!q)return;S.edit=clone(q);S.eq=0;S.errs=[];go('edit')},
+  async dup(d){const q=findQuiz(d.id);if(!q)return;const c=clone(q);delete c.example;c.id=uid();c.title=q.example?q.title:q.title+' (copie)';c.questions.forEach(x=>x.id=uid());await store.save(c);toast('Quiz copié dans votre bibliothèque.');render()},
+  del(d,el){if(armed!==d.id){armed=d.id;el.textContent='Confirmer la suppression';setTimeout(()=>{if(armed===d.id){armed=null;if(S.view==='home')render()}},4000);return}armed=null;store.del(d.id);render()},
+  play(d){const q=findQuiz(d.id);if(!q)return;const e=validate(clone(q));if(e.length){toast('Ce quiz est incomplet : ouvrez-le pour le corriger.');return}S.setup={quiz:q,mode:'screen',teams:['Équipe 1','Équipe 2','Équipe 3','Équipe 4']};go('setup')},
+  backup(){S.backup=!S.backup;render()},
+  'bk-copy'(){const v=$('#bk').value;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast('Sauvegarde copiée.'),()=>{$('#bk').select();toast('Sélectionné : copiez avec Ctrl+C.')})},
+  async 'bk-import'(){let arr;try{arr=JSON.parse($('#bk').value)}catch(e){return toast('Texte illisible : collez une sauvegarde complète.')}
+    if(!Array.isArray(arr))arr=[arr];let n=0;for(const raw of arr){const q=cleanQuiz(raw);if(!q)continue;if(S.quizzes.some(x=>x.id===q.id))q.id=uid();await store.save(q);n++}toast(n?n+' quiz importé(s).':'Aucun quiz trouvé dans ce texte.');render()},
+  'q-sel'(d){S.eq=+d.i;render()},
+  'q-add'(){S.edit.questions.push(newQ());S.eq=S.edit.questions.length-1;render();$('#f-text').focus()},
+  'q-dup'(){const c=clone(S.edit.questions[S.eq]);c.id=uid();S.edit.questions.splice(S.eq+1,0,c);S.eq++;render()},
+  'q-del'(){if(S.edit.questions.length<2)return;S.edit.questions.splice(S.eq,1);S.eq=Math.max(0,S.eq-1);render()},
+  'q-up'(){const a=S.edit.questions,i=S.eq;if(i<1)return;[a[i-1],a[i]]=[a[i],a[i-1]];S.eq--;render()},
+  'q-down'(){const a=S.edit.questions,i=S.eq;if(i>=a.length-1)return;[a[i+1],a[i]]=[a[i],a[i+1]];S.eq++;render()},
+  'img-del'(){S.edit.questions[S.eq].img='';render()},
+  async save(){S.errs=validate(S.edit);if(S.errs.length){render();window.scrollTo(0,0);return}await store.save(S.edit);S.edit=null;toast('Quiz enregistré.');go('home')},
+  mode(d){S.setup.mode=d.m;render()},
+  'start-screen'(){const s=S.setup;G={quiz:s.quiz,teams:s.teams.map((t,i)=>({name:t.trim()||('Équipe '+(i+1)),score:0})),i:0,phase:'q',left:s.quiz.questions[0].dur,won:new Set()};go('game')},
+  'g-reveal'(){G.phase='reveal';render()},
+  award(d){const i=+d.i;if(G.won.has(i)){G.won.delete(i);G.teams[i].score-=100}else{G.won.add(i);G.teams[i].score+=100}render()},
+  'g-next'(){if(G.i>=G.quiz.questions.length-1)G.phase='end';else{G.i++;G.phase='q';G.left=G.quiz.questions[G.i].dur;G.won=new Set()}render()},
+  replay(){G.teams.forEach(t=>t.score=0);G.i=0;G.phase='q';G.left=G.quiz.questions[0].dur;G.won=new Set();render()},
+  full(){try{(document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()).catch(()=>toast('Plein écran indisponible ici.'))}catch(e){toast('Plein écran indisponible ici.')}},
+  quit(d,el){if(armed!=='quit'){armed='quit';el.textContent='Confirmer';setTimeout(()=>{if(armed==='quit'){armed=null;render()}},4000);return}armed=null;A.home()},
+  'start-host'(){hostOpen(S.setup.quiz)},
+  'h-start'(){if(Object.keys(H.players).length){H.i=0;hostAsk()}},
+  'h-reveal'(){clearInterval(tick);hostReveal()},
+  'h-next'(){hostNext()},
+  'p-join'(){playerJoin()},
+  'p-ans'(d){if(P.phase!=='q')return;try{P.conn.send({t:'ans',q:P.q.i,c:+d.c})}catch(e){}P.phase='wait';render()},
+  'p-reset'(){playerLeave();P=null;render()},
+  'p-leave'(){A.home()}
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const f=A[el.dataset.act];if(f)f(el.dataset,el)});
+function onField(e){
+  const el=e.target,f=el.dataset&&el.dataset.f;if(!f)return;
+  if(S.view==='setup'){const s=S.setup;
+    if(f==='nteams'&&e.type==='change'){const n=+el.value;while(s.teams.length<n)s.teams.push('Équipe '+(s.teams.length+1));s.teams.length=n;render()}
+    if(f==='team')s.teams[+el.dataset.i]=el.value;return}
+  if(S.view!=='edit')return;const z=S.edit,q=z.questions[S.eq];
+  if(f==='title')z.title=el.value;
+  else if(f==='level')z.level=el.value;
+  else if(f==='text'){q.text=el.value;const it=document.querySelector('.qitem.on');if(it)it.innerHTML='<b>'+(S.eq+1)+'.</b> '+esc(q.text||'Nouvelle question')}
+  else if(f==='opt')q.opts[+el.dataset.i]=el.value;
+  else if(f==='ok')q.ok=+el.value;
+  else if(f==='dur')q.dur=+el.value;
+  else if(f==='type'&&e.type==='change'){q.type=el.value;if(q.type==='vf'&&q.ok>1)q.ok=0;render()}
+  else if(f==='img'&&e.type==='change'&&el.files[0])loadImg(el.files[0],q);
+}
+document.addEventListener('input',onField);document.addEventListener('change',onField);
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&S.view==='join'&&P&&P.phase==='form'&&e.target.tagName==='INPUT'){e.preventDefault();playerJoin()}});
+function loadImg(file,q){
+  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,720/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);q.img=c.toDataURL('image/jpeg',.7);render()};im.onerror=()=>toast('Image illisible. Essayez un fichier JPG ou PNG.');im.src=r.result};r.readAsDataURL(file);
+}
+function hashCode(){const m=/^#rejoindre-(\d{6})$/.exec(location.hash);return m?m[1]:''}
+const isJoinHash=()=>/^#rejoindre(-\d{6})?$/.test(location.hash);
+window.addEventListener('hashchange',()=>{if(isJoinHash()&&S.view==='home'){P=null;go('join')}});
+window.addEventListener('beforeunload',()=>{hostClose();playerLeave()});
+if(isJoinHash())S.view='join';
+store.init();
+</script>
+</body>
+</html>
