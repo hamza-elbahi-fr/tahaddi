@@ -293,27 +293,34 @@ async function drawQR(){
   new QRCode(el,{text:joinUrl(),width:220,height:220,colorDark:'#12292b',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
 }
 function loadPeer(){return new Promise((ok,ko)=>{if(window.Peer)return ok();const s=document.createElement('script');s.src=PEER_SRC;s.onload=()=>window.Peer?ok():ko();s.onerror=ko;document.head.appendChild(s)})}
+const online=()=>Object.values(H.players).filter(p=>p.conn&&p.conn.open);
+function uniqueName(name){const taken=new Set(Object.values(H.players).map(p=>p.name.toLowerCase()));let n=name,k=2;while(taken.has(n.toLowerCase()))n=name.slice(0,17)+' '+k++;return n}
+function sendTo(p,m){p.last=m;try{p.conn.open&&p.conn.send(m)}catch(e){}}
 function ranking(){return Object.values(H.players).map(p=>({name:p.name,score:p.score})).sort((a,b)=>b.score-a.score)}
 function bcast(m){for(const p of Object.values(H.players))try{p.conn.open&&p.conn.send(m)}catch(e){}}
 async function hostOpen(quiz){
-  H={quiz,code:'',players:{},i:0,phase:'opening',left:0,err:''};S.view='host';render();
+  H={quiz,code:'',players:{},keys:{},i:0,phase:'opening',left:0,err:''};S.view='host';render();keepAwake();
   try{await loadPeer()}catch(e){H.err='Impossible de charger le module de connexion. Vérifiez la connexion internet.';return render()}
   const tryOpen=()=>{const code=String(Math.floor(100000+Math.random()*900000));const peer=new Peer(PEER_PREFIX+code);H.peer=peer;
     peer.on('open',()=>{H.code=code;H.phase='lobby';render()});
     peer.on('error',e=>{if(e.type==='unavailable-id'){peer.destroy();tryOpen()}else if(H.phase==='opening'){H.err='Connexion au service de mise en relation impossible. Réessayez dans un instant.';render()}});
     peer.on('disconnected',()=>{try{peer.reconnect()}catch(e){}});
-    peer.on('connection',conn=>{conn.on('data',m=>hostMsg(conn,m));conn.on('close',()=>{const p=H&&H.players[conn.peer];if(p&&H.phase==='lobby'){delete H.players[conn.peer];render()}})});
+    peer.on('connection',conn=>{conn.on('data',m=>hostMsg(conn,m));conn.on('close',()=>{const k=H&&H.keys[conn.peer],p=k&&H.players[k];if(p&&p.conn===conn&&H.phase==='lobby'){delete H.players[k];render()}})});
   };tryOpen();
 }
 function hostMsg(conn,m){
   if(!H||!m||typeof m!=='object')return;
-  if(m.t==='join'){const name=String(m.name||'').trim().slice(0,20)||'Joueur';
-    if(!H.players[conn.peer]){if(Object.keys(H.players).length>=300)return;H.players[conn.peer]={name,score:0,ans:null,at:0,conn}}else H.players[conn.peer].conn=conn;
-    conn.send({t:'lobby',title:H.quiz.title});if(H.phase==='lobby')render();else if(H.phase==='q')sendQ(conn);return}
-  const p=H.players[conn.peer];if(!p)return;
+  if(m.t==='join'){ // un élève qui revient (téléphone en veille, page rechargée) retrouve ses points
+    const key=typeof m.pid==='string'&&/^[a-z0-9]{8,40}$/.test(m.pid)?'p:'+m.pid:conn.peer;H.keys[conn.peer]=key;
+    let p=H.players[key];
+    if(p){if(p.conn&&p.conn!==conn)try{p.conn.close()}catch(e){}p.conn=conn}
+    else{if(Object.keys(H.players).length>=300)return;p=H.players[key]={name:uniqueName(String(m.name||'').trim().slice(0,20)||'Joueur'),score:0,ans:null,at:0,conn}}
+    conn.send({t:'lobby',title:H.quiz.title,name:p.name});
+    if(H.phase==='lobby')render();else if(H.phase==='q'){if(p.ans===null)sendQ(conn);else conn.send({t:'wait'})}else if(p.last)conn.send(p.last);return}
+  const p=H.players[H.keys[conn.peer]];if(!p||p.conn!==conn)return;
   if(m.t==='ans'&&H.phase==='q'&&m.q===H.i&&p.ans===null&&[0,1,2,3].includes(m.c)){p.ans=m.c;p.at=H.dur-Math.max(0,H.left);
-    const all=Object.values(H.players),done=all.filter(x=>x.ans!==null).length;const el=$('#answered');if(el)el.textContent=done+' / '+all.length+' réponses';
-    if(done===all.length){clearInterval(tick);hostReveal()}}
+    const on=online(),done=on.filter(x=>x.ans!==null).length;const el=$('#answered');if(el)el.textContent=done+' / '+on.length+' réponses';
+    if(on.length&&done>=on.length){clearInterval(tick);hostReveal()}}
 }
 function sendQ(conn){const q=H.quiz.questions[H.i];const m={t:'q',i:H.i,n:H.quiz.questions.length,text:q.text,opts:visOpts(q)};conn?conn.send(m):bcast(m)}
 function hostAsk(){const q=H.quiz.questions[H.i];H.phase='q';H.dur=q.dur;H.left=q.dur;for(const p of Object.values(H.players)){p.ans=null;p.at=0;p.gain=0}sendQ();render()}
@@ -321,10 +328,10 @@ function hostReveal(){
   const q=H.quiz.questions[H.i];H.phase='reveal';H.counts={};
   for(const p of Object.values(H.players)){if(p.ans!==null)H.counts[p.ans]=(H.counts[p.ans]||0)+1;const ok=p.ans===q.ok;p.gain=ok?Math.round(500+500*(1-Math.min(1,p.at/H.dur))):0;p.score+=p.gain}
   const r=ranking();
-  for(const p of Object.values(H.players)){try{p.conn.open&&p.conn.send({t:'res',ok:p.ans===q.ok,answered:p.ans!==null,gain:p.gain,score:p.score,rank:r.findIndex(x=>x.name===p.name&&x.score===p.score)+1,total:r.length,good:(visOpts(q).find(o=>o.i===q.ok)||{}).t||''})}catch(e){}}
+  for(const p of Object.values(H.players))sendTo(p,{t:'res',ok:p.ans===q.ok,answered:p.ans!==null,gain:p.gain,score:p.score,rank:r.findIndex(x=>x.name===p.name)+1,total:r.length,good:(visOpts(q).find(o=>o.i===q.ok)||{}).t||''});
   render();
 }
-function hostNext(){if(H.i>=H.quiz.questions.length-1){H.phase='end';const r=ranking();for(const p of Object.values(H.players)){try{p.conn.open&&p.conn.send({t:'end',score:p.score,rank:r.findIndex(x=>x.name===p.name&&x.score===p.score)+1,total:r.length})}catch(e){}}render()}else{H.i++;hostAsk()}}
+function hostNext(){if(H.i>=H.quiz.questions.length-1){H.phase='end';const r=ranking();for(const p of Object.values(H.players))sendTo(p,{t:'end',score:p.score,rank:r.findIndex(x=>x.name===p.name)+1,total:r.length});render()}else{H.i++;hostAsk()}}
 function hostClose(){if(H&&H.peer){try{H.peer.destroy()}catch(e){}}H=null}
 function vHost(){
   const z=H.quiz,n=z.questions.length,pl=Object.values(H.players);
@@ -337,7 +344,7 @@ function vHost(){
   if(H.phase==='end')return `<div class="stage"><div class="gbar"><span class="ttl">${esc(z.title)}</span></div><h1 class="center" style="font-size:44px">Le podium</h1>${podium(ranking())}<div class="row" style="justify-content:center;margin-top:20px"><button class="btn" data-act="quit">Fermer la salle</button></div></div>`;
   const q=z.questions[H.i],rev=H.phase==='reveal';
   return `<div class="stage">${gbar(z.title,H.i,n,!rev)}<div class="gmain ${rev?'':'solo'}"><div>${qBlock(q,rev,rev?H.counts:null)}</div>${rev?`<aside class="board"><h3>Classement</h3>${ranking().slice(0,8).map((p,i)=>`<div class="sline"><span>${i+1}. ${esc(p.name)}</span><span>${p.score}</span></div>`).join('')}</aside>`:''}</div>
-  <div class="gfoot">${rev?`<span class="sp"></span><button class="btn pri" data-act="h-next">${H.i===n-1?'Voir le podium':'Question suivante'}</button>`:`<b id="answered">${pl.filter(p=>p.ans!==null).length} / ${pl.length} réponses</b><span class="sp"></span><button class="btn" data-act="h-reveal">Arrêter le temps</button>`}</div></div>`;
+  <div class="gfoot">${rev?`<span class="sp"></span><button class="btn pri" data-act="h-next">${H.i===n-1?'Voir le podium':'Question suivante'}</button>`:`<b id="answered">${online().filter(p=>p.ans!==null).length} / ${online().length} réponses</b><span class="sp"></span><button class="btn" data-act="h-reveal">Arrêter le temps</button>`}</div></div>`;
 }
 
 /* ---------- mode téléphones : joueur ---------- */
@@ -353,9 +360,12 @@ function vJoin(){
   else if(P.phase==='wait')body=`<p class="big">Réponse envoyée.</p><p class="center note">Attendez la fin du temps.</p>`;
   else if(P.phase==='res'){const r=P.res;body=`<p class="big" style="color:var(${r.ok?'--good':'--bad'})">${r.ok?'Bonne réponse':r.answered?'Mauvaise réponse':'Temps écoulé'}</p>${r.ok?'':`<p class="center">La bonne réponse : <b>${esc(r.good)}</b></p>`}<p class="center"><b>+${r.gain}</b> points · total <b>${r.score}</b><br>Vous êtes ${r.rank}${r.rank===1?'er':'e'} sur ${r.total}</p>`}
   else if(P.phase==='end'){const r=P.res;body=`<p class="big">Quiz terminé</p><p class="center">Score final : <b>${r.score}</b> points<br>Classement : ${r.rank}${r.rank===1?'er':'e'} sur ${r.total}</p>`}
-  else if(P.phase==='lost')body=`<p class="big">Connexion perdue</p><p class="center note">La salle a été fermée ou votre connexion a été coupée.</p><button class="btn pri" data-act="p-reset">Rejoindre à nouveau</button>`;
+  else if(P.phase==='lost')body=`<p class="big">Connexion perdue</p><p class="center note">La salle a été fermée ou votre connexion a été coupée. Si la partie continue, rejoignez-la : vous retrouverez vos points.</p><button class="btn pri" data-act="p-reset">Rejoindre à nouveau</button>`;
   return `<div class="phone"><div class="row"><button class="logo" data-act="p-leave">Tahaddi<i>.</i></button><span class="sp"></span>${back}</div>${body}</div>`;
 }
+const PID=(()=>{try{let v=sessionStorage.getItem('tahaddi.pid');if(!/^[a-z0-9]{8,40}$/.test(v||'')){v=uid();sessionStorage.setItem('tahaddi.pid',v)}return v}catch(e){return ''}})();
+function keepAwake(){try{if(navigator.wakeLock&&!keepAwake.l)navigator.wakeLock.request('screen').then(l=>{keepAwake.l=l;l.addEventListener('release',()=>keepAwake.l=null)}).catch(()=>{})}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&(H||(P&&P.phase!=='form')))keepAwake()});
 async function playerJoin(){
   P.code=($('#p-code').value||'').replace(/\D/g,'');P.name=($('#p-name').value||'').trim().slice(0,20);
   if(P.code.length!==6){P.err='Le code comporte 6 chiffres.';return render()}
@@ -367,9 +377,10 @@ async function playerJoin(){
   const to=setTimeout(()=>fail('La salle ne répond pas. Vérifiez le code et réessayez.'),15000);
   peer.on('error',e=>fail(e.type==='peer-unavailable'?'Aucune partie avec ce code.':'Connexion impossible sur ce réseau. Réessayez.'));
   peer.on('open',()=>{const conn=peer.connect(PEER_PREFIX+P.code,{reliable:true});P.conn=conn;
-    conn.on('open',()=>conn.send({t:'join',name:P.name}));
+    conn.on('open',()=>{conn.send({t:'join',name:P.name,pid:PID});keepAwake()});
     conn.on('data',m=>{if(!m||typeof m!=='object'||!P)return;
-      if(m.t==='lobby'){clearTimeout(to);P.title=String(m.title||'');if(P.phase==='connecting')P.phase='lobby'}
+      if(m.t==='lobby'){clearTimeout(to);P.title=String(m.title||'');if(m.name)P.name=String(m.name).slice(0,24);if(P.phase==='connecting')P.phase='lobby'}
+      else if(m.t==='wait')P.phase='wait'
       else if(m.t==='q'&&Array.isArray(m.opts)){P.q={i:+m.i||0,n:+m.n||0,text:String(m.text||''),opts:m.opts.filter(o=>o&&[0,1,2,3].includes(o.i)).map(o=>({i:o.i,t:String(o.t||'')}))};P.phase='q'}
       else if(m.t==='res'){P.res={ok:!!m.ok,answered:!!m.answered,gain:+m.gain||0,score:+m.score||0,rank:+m.rank||0,total:+m.total||0,good:String(m.good||'')};P.phase='res'}
       else if(m.t==='end'){P.res={score:+m.score||0,rank:+m.rank||0,total:+m.total||0};P.phase='end'}
@@ -417,7 +428,7 @@ const A={
   'h-next'(){hostNext()},
   'p-join'(){playerJoin()},
   'p-ans'(d){if(P.phase!=='q')return;try{P.conn.send({t:'ans',q:P.q.i,c:+d.c})}catch(e){}P.phase='wait';render()},
-  'p-reset'(){playerLeave();P=null;render()},
+  'p-reset'(){const c=P&&P.code||'',n=P&&P.name||'';playerLeave();P={phase:'form',err:'',name:n,code:c};render()},
   'p-leave'(){A.home()}
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const f=A[el.dataset.act];if(f)f(el.dataset,el)});
